@@ -6,14 +6,14 @@
 //
 
 enum ExampleApi {
-    static let baseURL = URL(string: "https://jsonplaceholder.typicode.com")!
+    static let host = "jsonplaceholder.typicode.com"
     
-    static func todos() -> URL {
-        return baseURL.appendingPathComponent("todos")
+    static func todosPath() -> String {
+        return "/todos"
     }
     
-    static func todo(id: Int) -> URL {
-        return baseURL.appendingPathComponent("todos").appendingPathComponent("\(id)")
+    static func todoIdPath(id: Int) -> String {
+        return "/todos/\(id)"
     }
 }
 
@@ -26,23 +26,39 @@ class JsonPlaceholderRemoteRepository {
     
     func getJsonPlaceholderData(id: Int) async -> Result<JsonPlaceholderResponse, NetworkError> {
         do {
-            let response = try await networkManager.request(url: ExampleApi.todo(id: id),
-                                                  method: .get,
-                                                  headers: nil,
-                                                  body: nil,
-                                                  responseType: JsonPlaceholderResponse.self)
+            let networkRequest = BasicNetworkRequest(host: ExampleApi.host, path: ExampleApi.todoIdPath(id: id), method: .get)
+            let response = try await networkManager.sendRequest(requestInfo: networkRequest, responseType: JsonPlaceholderResponse.self)
             return .success(response)
         } catch {
             return .failure(error as! NetworkError)
         }
     }
     
+    func getJsonPlaceholderData(id: Int, resultHandler: @escaping (Result<JsonPlaceholderResponse, NetworkError>) -> Void) {
+        let networkRequest = BasicNetworkRequest(host: ExampleApi.host, path: ExampleApi.todoIdPath(id: id), method: .get)
+        networkManager.sendRequest(requestInfo: networkRequest) { result in
+            DispatchQueue.main.async {
+                resultHandler(result)
+            }
+        }
+    }
+    
     func getAllJsonPlaceholderData() async -> Result<[JsonPlaceholderResponse], NetworkError> {
         do {
-            let response = try await networkManager.request(url: ExampleApi.todos(), method: .get, headers: nil, body: nil, responseType: [JsonPlaceholderResponse].self)
+            let networkRequest = BasicNetworkRequest(host: ExampleApi.host, path: ExampleApi.todosPath(), method: .get)
+            let response = try await networkManager.sendRequest(requestInfo: networkRequest, responseType: [JsonPlaceholderResponse].self)
             return .success(response)
         } catch {
             return .failure(error as! NetworkError)
+        }
+    }
+    
+    func getAllJsonPlaceholderData(resultHandler: @escaping (Result<[JsonPlaceholderResponse], NetworkError>) -> Void) {
+        let networkRequest = BasicNetworkRequest(host: ExampleApi.host, path: ExampleApi.todosPath(), method: .get)
+        networkManager.sendRequest(requestInfo: networkRequest) { result in
+            DispatchQueue.main.async {
+                resultHandler(result)
+            }
         }
     }
 }
